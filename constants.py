@@ -1,0 +1,3 @@
+OPENAI_API_KEY = "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"
+MM = 1000000
+BN = 1000000000
