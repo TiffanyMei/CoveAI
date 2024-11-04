@@ -41,8 +41,8 @@ class CoveAI:
         chat_completion = self.openai_client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "user", "content": "You are a private equity investor trying to learn about a company you are interested in acquiring."},
-                {"role": "user", "content": f"Here is the content of the company's website at 'osmo.ai'. {website_content}"},
+                {"role": "system", "content": "You are a private equity investor trying to learn about a company you are interested in acquiring."},
+                {"role": "user", "content": f"Here is the content of the company's website: {website_content}"},
                 {"role": "user", "content": "Do not make up any information if you can not find the answer. Create a new Company object describing this company."}
             ],
             functions=[
@@ -57,7 +57,7 @@ class CoveAI:
         args = json.loads(chat_completion.choices[0].message.function_call.arguments)
         return Company(**args)
 
-    def match_firm(self, company: Company, num_firms: int = 3, reason_word_count: int = 30) -> list[Match]:
+    def match_buyers(self, company: Company, num_firms: int = 3, reason_word_count: int = 30) -> list[Match]:
         """
         Find private equity firms that would most likely be interested in acquiring the input company.
         :param company: company profile
@@ -70,7 +70,7 @@ class CoveAI:
         chat_completion = self.openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "user",
+                {"role": "system",
                  "content": "You are a private equity investor trying to guess which private equity firm is likely to be interested in acquiring a company."},
                 {"role": "user",
                  "content": f"The next message contains relevant information about this company in the format of a JSON string. Add it to your context."},
@@ -85,11 +85,12 @@ class CoveAI:
                             "distressed means whether this firm is interested in acquiring distressed companies."},
                 {"role": "user", "content": str([firm.json() for firm in firms])},
                 {"role": "user",
-                 "content": f"Give me the top {num_firms} private equity firms from this list that are most likely to be interested in acquiring the company."+
-                            f"For each choice, you should also provide a reason for why this firm would be interested in acquiring the company in around {reason_word_count} words that takes into consideration characteristics of this company."+
-                            f"For each choice, you should also provide a reason for why this firm would be not interested in acquiring the company in around {reason_word_count} words that takes into consideration characteristics of this company." +
-                            f"Based on these reasons, you should also give this match a score with an integer from 1 to 10, 10 being the most aligned match." +
-                            f"Create a MatchList object from these {num_firms} choices, ordered from best match to worst match."}
+                 "content": f"Think about the top {num_firms} private equity firms from this list that are most likely to be interested in acquiring the company."+
+                            f"Step 1 - think about a reason for why this firm would be interested in acquiring the company in around {reason_word_count} words that takes into consideration characteristics of this company."+
+                            f"Step 2 - think about a reason for why this firm would be not interested in acquiring the company in around {reason_word_count} words that takes into consideration characteristics of this company." +
+                            f"Step 3 - based on these reasons, you should also give this match a score with an integer from 1 to 10, 10 being the most aligned match."},
+                {"role": "user",
+                 "content": f"Create a MatchList object from these {num_firms} choices, ordered from best match to worst match."}
             ],
             functions=[
                 {
